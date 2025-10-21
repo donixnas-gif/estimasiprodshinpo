@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estimasi Produksi & Perencanaan Mesin</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Supabase SDK dari CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> 
+    <!-- Konfigurasi Font Inter -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+        /* Custom styles for modal (popup) */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        /* Style untuk input yang harus diubah ke huruf besar */
+        .uppercase-input {
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 min-h-screen">
+
+    <div id="app" class="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl">
+        
+        <div class="flex justify-between items-center mb-4 border-b-4 border-blue-100 pb-2">
+            <h1 class="text-3xl font-extrabold text-blue-700">
+                Estimasi Produksi & Perencanaan Mesin
+            </h1>
+            <!-- Tombol Admin Login/Logout -->
+            <button id="adminLoginButton" onclick="toggleAdminLogin()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out shadow-md text-sm">
+                Login
+            </button>
+        </div>
+        
+        <p class="text-gray-600 mb-8">
+            Hitung estimasi jam, shift, dan hari yang diperlukan.
+        </p>
+
+        <!-- Bagian Input Data Produksi Baru (Hanya tampil jika Admin Login) -->
+        <div id="adminPanel" class="hidden">
+            <div class="mb-10 p-6 bg-yellow-50 rounded-xl border border-yellow-200">
+                <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Manajemen Data Produksi Baru
+                </h2 >
+                <form id="productionDataForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Field tersembunyi untuk ID saat Edit -->
+                    <input type="hidden" id="inputId" value="">
+
+                    <!-- Row 1: Kode, Komponen, Mesin -->
+                    <div>
+                        <label for="inputCode" class="block text-sm font-medium text-gray-700">Kode Barang *</label>
+                        <!-- Ditambahkan class uppercase-input dan oninput untuk force uppercase -->
+                        <input type="text" id="inputCode" placeholder="Contoh: 110" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 text-gray-800 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
+                    </div>
+                    <div>
+                        <label for="inputName" class="block text-sm font-medium text-gray-700">Nama Komponen / Produk</label>
+                         <!-- Ditambahkan class uppercase-input dan oninput untuk force uppercase -->
+                        <input type="text" id="inputName" placeholder="Contoh: Komponen Standard X" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
+                    </div>
+                    <div>
+                        <label for="inputMachine" class="block text-sm font-medium text-gray-700">Mesin Utama</label>
+                        <!-- Ditambahkan class uppercase-input dan oninput untuk force uppercase -->
+                        <input type="text" id="inputMachine" placeholder="Contoh: Mesin A01" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:focus:border-yellow-500 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
+                    </div>
+
+                    <!-- Row 2: Calculation Inputs & Output -->
+                    <div>
+                        <label for="inputPcsPerBox" class="block text-sm font-medium text-gray-700">Isi Dus (pcs) *</label>
+                        <input type="text" id="inputPcsPerBox" placeholder="Contoh: 100" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="inputTargetPerShift" class="block text-sm font-medium text-gray-700">Target per Shift (pcs) *</label>
+                        <input type="text" id="inputTargetPerShift" placeholder="Contoh: 8000" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="capacity3Shift" class="block text-sm font-medium text-gray-700">Kapasitas 3 Shift (pcs)</label>
+                        <input type="text" id="capacity3Shift" readonly value="Otomatis Terisi" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 shadow-inner">
+                    </div>
+                    
+                    <div class="sm:col-span-2 lg:col-span-3 pt-2 flex space-x-3">
+                        <button type="submit" id="submitButton" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3m-1-4l-3 3m0 0l-3 3m3-3V4" />
+                            </svg>
+                            Simpan Data Produksi
+                        </button>
+                        <button type="button" id="cancelEditButton" onclick="cancelEdit()" class="hidden w-1/4 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg">
+                            Batal Edit
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Bagian Input Estimasi (Search Bar menggantikan Dropdown) -->
+        <div class="grid grid-cols-1 md:col-span-3 gap-6 mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
+            <div>
+                <label for="productCode" class="block text-sm font-medium text-gray-700 mb-1">Kode Produk (Ketik untuk Mencari)</label>
+                <!-- Diberi class uppercase-input agar terlihat konsisten -->
+                <!-- Menambahkan oninput untuk memastikan kode yang dicari uppercase -->
+                <input type="text" id="productCode" placeholder="Masukkan Kode Barang" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-800 shadow-sm transition duration-150 ease-in-out uppercase-input" list="productCodeList" oninput="this.value = this.value.toUpperCase()">
+                
+                <!-- Datalist untuk memberikan saran (seperti autocomplete) -->
+                <datalist id="productCodeList">
+                    <!-- Opsi akan diisi oleh JavaScript -->
+                </datalist>
+                
+            </div>
+            <div class="md:col-span-2">
+                <label for="orderQty" class="block text-sm font-medium text-gray-700 mb-1">Jumlah Pesanan (Dus)</label>
+                <input type="number" id="orderQty" placeholder="Contoh: 1500" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm transition duration-150 ease-in-out" min="1">
+            </div>
+            <div class="md:col-span-3">
+                <button onclick="calculateEstimation()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.01] shadow-lg shadow-blue-500/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                    </svg>
+                    Hitung Estimasi Produksi
+                </button>
+            </div>
+        </div>
+
+        <!-- Bagian Hasil Estimasi -->
+        <div id="results" class="hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Hasil Estimasi Waktu</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+
+                <!-- Kartu Jam -->
+                <div class="bg-indigo-50 p-5 rounded-xl shadow-md border-t-4 border-indigo-500">
+                    <p class="text-sm font-medium text-indigo-700">Total Jam Produksi (Net)</p>
+                    <p id="resultHours" class="text-3xl font-bold text-indigo-900 mt-1">--</p>
+                </div>
+
+                <!-- Kartu Shift -->
+                <div class="bg-green-50 p-5 rounded-xl shadow-md border-t-4 border-green-500">
+                    <p class="text-sm font-medium text-green-700">Total Shift Dibutuhkan (Pembulatan ke atas)</p>
+                    <p id="resultShifts" class="text-3xl font-bold text-green-900 mt-1">--</p>
+                </div>
+
+                <!-- Kartu Hari -->
+                <div class="bg-orange-50 p-5 rounded-xl shadow-md border-t-4 border-orange-500">
+                    <p class="text-sm font-medium text-orange-700">Total Hari Kerja (Pembulatan ke atas)</p>
+                    <p id="resultDays" class="text-3xl font-bold text-orange-900 mt-1">--</p>
+                </div>
+            </div>
+            
+            <!-- Tombol Toggle Detail Estimasi -->
+            <div class="flex justify-end mb-4">
+                <button id="toggleDetailsButton" onclick="toggleDetails()" class="text-sm text-gray-600 hover:text-blue-600 font-medium transition duration-150 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" id="toggleIcon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    Lihat Detail Perhitungan
+                </button>
+            </div>
+
+            <!-- Detail Pesanan -->
+            <div id="estimationDetails" class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-200 hidden">
+                <!-- Detail estimasi akan ditampilkan di sini -->
+            </div>
+        </div>
+
+        <!-- Tabel Data Laju Produksi Asumsi -->
+        <div class="mt-10 pt-4 border-t border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">Data Master Produksi Tersimpan</h2>
+            <div id="rateTableContainer" class="overflow-x-auto rounded-lg shadow-md">
+                <!-- Tabel akan diisi oleh JavaScript -->
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                *Asumsi: 1 Hari = 3 Shift, 1 Shift = 8 Jam. Perhitungan waktu didasarkan pada target pcs per shift.
+            </p>
+        </div>
+
+        <!-- Pesan Kesalahan/Informasi -->
+        <!-- Perubahan CSS di sini: top-4, left-1/2, transform, -translate-x-1/2 -->
+        <div id="messageBox" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 p-3 rounded-lg shadow-xl transition-opacity duration-300 z-50" role="alert">
+            <!-- Pesan akan ditampilkan di sini -->
+        </div>
+        
+        <!-- Modal (Popup) Konfirmasi Hapus -->
+        <div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                <h3 class="text-xl font-bold mb-4 text-red-700">Konfirmasi Penghapusan</h3>
+                <p class="text-gray-600 mb-4">Apakah Anda yakin ingin menghapus data master **<span id="deleteCodeDisplay" class="font-bold"></span>** secara permanen?</p>
+                <input type="hidden" id="deleteIdConfirm">
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="toggleDeleteModal(false)" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150">Batal</button>
+                    <button type="button" onclick="confirmDelete()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-150">Hapus</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MODAL BARU: Konfirmasi Logout -->
+        <div id="logoutModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                <h3 class="text-xl font-bold mb-4 text-red-700">Konfirmasi Logout</h3>
+                <p class="text-gray-600 mb-4">Apakah Anda yakin ingin keluar dari mode Administrator? Anda tidak akan bisa mengubah data master setelah logout.</p>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="toggleLogoutModal(false)" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150">Batal</button>
+                    <button type="button" onclick="confirmLogout()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-150">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal (Popup) Login Admin -->
+    <div id="loginModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm">
+            <h3 class="text-xl font-bold mb-4 text-indigo-700">Login Administrator</h3>
+            <p class="text-sm text-gray-600 mb-4">Masukkan kata sandi admin untuk mengakses manajemen data.</p>
+            <form onsubmit="event.preventDefault(); attemptAdminLogin();">
+                <input type="password" id="adminPasswordInput" placeholder="Kata Sandi" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 mb-4 shadow-sm" required>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="toggleAdminLogin()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition duration-150">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI SUPABASE ---
+        // KREDENSIAL TELAH DIPERBARUI BERDASARKAN INPUT PENGGUNA
+        const SUPABASE_URL = 'https://adxpkzebtvetcnhngjax.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkeHBremVidHZldGNuaG5namF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NDEzMTEsImV4cCI6MjA3NjUxNzMxMX0.c8pMAL7jAJFJmKFh8hcjI8_pIiW_pHZrenHT8nbUdoA'; 
+        const TABLE_NAME = 'production_rates'; 
+        
+        let supabase;
+        let productionData = {}; 
+        
+        // KONSTANTA APLIKASI
+        const HOURS_PER_SHIFT = 8;
+        const SHIFTS_PER_DAY = 3;
+        
+        // KONSTANTA ADMIN (Kata sandi sederhana)
+        const ADMIN_PASSWORD = "admin123"; 
+        let isLoggedIn = false;
+
+        // --- Fungsi Helper untuk membersihkan input text menjadi integer ---
+        const cleanInt = (str) => {
+            if (typeof str === 'number') return str;
+            if (typeof str !== 'string') return 0;
+            const cleaned = str.replace(/[^\d]/g, ''); 
+            return parseInt(cleaned) || 0; 
+        };
+        
+        // **FUNGSI BARU**: Mengubah Jam Desimal menjadi "X Jam Y Menit"
+        function formatHoursMinutes(decimalHours) {
+            if (decimalHours < 0) return '0 Jam 0 Menit';
+            
+            // Ambil bagian jam (bilangan bulat)
+            const hours = Math.floor(decimalHours);
+            
+            // Ambil bagian desimal dan konversi ke menit (satu jam = 60 menit)
+            const decimalPart = decimalHours - hours;
+            const minutes = Math.round(decimalPart * 60);
+            
+            return `${hours} Jam ${minutes} Menit`;
+        }
+
+        // Inisialisasi Supabase
+        window.onload = async function() {
+            try {
+                // Inisialisasi klien Supabase
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                setupApp();
+                showMessage("Koneksi Supabase Berhasil! (Menggunakan data 'production_rates')", "info");
+
+            } catch (error) {
+                console.error("Kesalahan inisialisasi Supabase:", error);
+                
+                let errorMessage;
+                if (error.message.includes("Failed to fetch")) {
+                    errorMessage = "Gagal terhubung ke Supabase. Cek apakah RLS/CORS di Supabase diatur dengan tepat.";
+                } else {
+                    errorMessage = `Gagal menginisialisasi Supabase: ${error.message}`;
+                }
+                showMessage(errorMessage, "error");
+            }
+        }
+        
+        // Fungsi untuk menampilkan pesan (diubah untuk posisi tengah atas)
+        function showMessage(message, type = 'info') {
+            const box = document.getElementById('messageBox');
+            box.textContent = message;
+            box.className = `fixed top-4 left-1/2 transform -translate-x-1/2 p-3 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${
+                type === 'error' ? 'bg-red-600' : 'bg-green-600'
+            } text-white`;
+            box.classList.remove('hidden');
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 5000);
+        }
+
+        function setupApp() {
+            setupCapacityListener();
+            listenForProductionData();
+            document.getElementById('productionDataForm').addEventListener('submit', saveProductionData);
+            updateAdminUI(); 
+        }
+        
+        // --- LOGIKA ADMIN LOGIN/LOGOUT ---
+
+        function updateAdminUI() {
+            const adminPanel = document.getElementById('adminPanel');
+            const loginButton = document.getElementById('adminLoginButton');
+            
+            if (isLoggedIn) {
+                adminPanel.classList.remove('hidden');
+                loginButton.textContent = 'Logout';
+                loginButton.onclick = prepareLogout; 
+                loginButton.classList.remove('bg-indigo-500');
+                loginButton.classList.add('bg-red-500', 'hover:bg-red-600');
+            } else {
+                adminPanel.classList.add('hidden');
+                loginButton.textContent = 'Login';
+                loginButton.onclick = toggleAdminLogin;
+                loginButton.classList.remove('bg-red-500');
+                loginButton.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+            }
+            renderRateTable();
+        }
+
+        window.toggleAdminLogin = function() {
+            document.getElementById('loginModal').classList.toggle('hidden');
+            if (!document.getElementById('loginModal').classList.contains('hidden')) {
+                document.getElementById('adminPasswordInput').value = '';
+                document.getElementById('adminPasswordInput').focus();
+            }
+        }
+
+        window.attemptAdminLogin = function() {
+            const inputPass = document.getElementById('adminPasswordInput').value;
+            
+            if (inputPass === ADMIN_PASSWORD) {
+                isLoggedIn = true;
+                toggleAdminLogin();
+                updateAdminUI();
+                showMessage("Login Admin Berhasil!", "info");
+            } else {
+                showMessage("Kata Sandi Salah.", "error");
+                document.getElementById('adminPasswordInput').value = '';
+                document.getElementById('adminPasswordInput').focus();
+            }
+        }
+        
+        window.prepareLogout = function() {
+            toggleLogoutModal(true);
+        }
+        
+        window.toggleLogoutModal = function(show) {
+            document.getElementById('logoutModal').classList.toggle('hidden', !show);
+        }
+
+        window.confirmLogout = function() {
+            toggleLogoutModal(false);
+            handleAdminLogout();
+        }
+        
+        function handleAdminLogout() {
+            isLoggedIn = false;
+            updateAdminUI();
+            showMessage("Logout Admin Berhasil.", "info");
+        }
+
+        // --- FUNGSI MANAJEMEN DATA (CRUD) - MENGGUNAKAN SUPABASE ---
+        
+        // Mengubah dari onSnapshot (Firebase) ke Realtime Listener (Supabase)
+        function listenForProductionData() {
+            if (!supabase) return;
+
+            // 1. Ambil data awal
+            supabase
+                .from(TABLE_NAME)
+                .select('*')
+                .then(({ data, error }) => {
+                    if (error) {
+                        console.error("Supabase initial fetch error:", error);
+                        // Cek jika error 401/403 (Unauthorized/Forbidden)
+                        if (error.code && (error.code === '401' || error.code === '403')) {
+                             showMessage("Gagal memuat data. Cek pengaturan RLS (Row Level Security) di Supabase.", "error");
+                        } else {
+                             showMessage("Gagal memuat data awal dari Supabase.", "error");
+                        }
+                        return;
+                    }
+                    processSupabaseData(data);
+                    
+                    // 2. Setup Realtime Subscription
+                    // Menggunakan event '*' untuk mendengarkan semua perubahan (INSERT, UPDATE, DELETE)
+                    supabase.channel('public:production_rates')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, (payload) => {
+                            // Refresh semua data untuk memastikan konsistensi
+                            supabase.from(TABLE_NAME).select('*').then(({ data: newData }) => {
+                                processSupabaseData(newData);
+                            });
+                        })
+                        .subscribe();
+
+                })
+                .catch(err => {
+                    console.error("Supabase connection error:", err);
+                    showMessage("Kesalahan koneksi saat memuat data dari Supabase.", "error");
+                });
+        }
+        
+        // Memproses data Supabase ke format internal (productionData)
+        function processSupabaseData(data) {
+            const newProductionData = {};
+            if (data) {
+                data.forEach(item => {
+                    // Supabase menggunakan 'id' (primary key)
+                    newProductionData[item.id] = { 
+                        ...item,
+                        id: item.id,
+                        // Fixes for column name mismatches
+                        pcs_per_box: cleanInt(item.pcs_per_box), 
+                        targetPerShift: cleanInt(item.targetPerShift), 
+                    };
+                });
+            }
+            productionData = newProductionData;
+            populateProductDatalist(); 
+            renderRateTable();
+        }
+
+        // Menyimpan / Mengupdate data (Menggunakan Supabase insert/update)
+        async function saveProductionData(event) {
+            event.preventDefault();
+
+            if (!isLoggedIn) {
+                showMessage("Akses ditolak. Silakan Login sebagai Admin untuk menyimpan data.", "error");
+                return;
+            }
+
+            const currentId = document.getElementById('inputId').value; 
+            const code = document.getElementById('inputCode').value.trim(); 
+            const name = document.getElementById('inputName').value.trim() || 'Tidak Diketahui';
+            const machine = document.getElementById('inputMachine').value.trim() || 'Tidak Diketahui';
+            
+            const pcsPerBox = cleanInt(document.getElementById('inputPcsPerBox').value); 
+            const targetPerShift = cleanInt(document.getElementById('inputTargetPerShift').value);
+
+            if (!code || pcsPerBox <= 0 || targetPerShift <= 0) {
+                showMessage("Kode Barang, Isi Dus, dan Target per Shift wajib diisi dan harus berupa angka positif (di atas 0).", "error");
+                return;
+            }
+            
+            // Menggunakan string ISO 8601 untuk mengatasi masalah timestamp database
+            const isoTimestampString = new Date().toISOString();
+
+            const dataToSave = {
+                code: code,
+                name: name,
+                machine: machine,
+                pcs_per_box: pcsPerBox,
+                targetPerShift: targetPerShift,
+                // Menggunakan string ISO 8601
+                timestamp: isoTimestampString 
+            };
+            // ----------------------------------------
+
+            try {
+                let response;
+
+                if (currentId) {
+                    // Mode Edit: Gunakan .update().eq('id', id)
+                    response = await supabase
+                        .from(TABLE_NAME)
+                        .update(dataToSave)
+                        .eq('id', currentId)
+                        .select(); 
+                    
+                    if (response.error) throw response.error;
+                    showMessage(`Data untuk Kode Barang ${code} berhasil diperbarui!`, "info");
+
+                } else {
+                    // Mode Tambah: Gunakan .insert()
+                    response = await supabase
+                        .from(TABLE_NAME)
+                        .insert([dataToSave])
+                        .select(); 
+                    
+                    if (response.error) throw response.error;
+                    showMessage(`Data untuk Kode Barang ${code} berhasil disimpan!`, "info");
+                }
+                
+                cancelEdit(); 
+            } catch (e) {
+                console.error("Error saving/updating data to Supabase: ", e);
+                let errorMessage = `Gagal menyimpan/memperbarui data. Error: ${e.message}`;
+                 if (e.code && (e.code === '401' || e.code === '403')) {
+                     errorMessage = "Gagal menyimpan. Cek pengaturan RLS (Row Level Security) di Supabase untuk operasi INSERT/UPDATE.";
+                 }
+                showMessage(errorMessage, "error");
+            }
+        }
+        
+        // Menghapus data (Menggunakan Supabase .delete())
+        window.confirmDelete = async function() {
+            const idToDelete = document.getElementById('deleteIdConfirm').value;
+            toggleDeleteModal(false);
+            
+            if (idToDelete) {
+                try {
+                    const { error } = await supabase
+                        .from(TABLE_NAME)
+                        .delete()
+                        .eq('id', idToDelete);
+                    
+                    if (error) throw error;
+                    
+                    showMessage(`Data Kode Barang ${productionData[idToDelete].code} berhasil dihapus.`, "info");
+                    cancelEdit(); 
+                } catch (e) {
+                    console.error("Error deleting document: ", e);
+                    let errorMessage = `Gagal menghapus data. Error: ${e.message}`;
+                    if (e.code && (e.code === '401' || e.code === '403')) {
+                         errorMessage = "Gagal menghapus. Cek pengaturan RLS (Row Level Security) di Supabase untuk operasi DELETE.";
+                    }
+                    showMessage(errorMessage, "error");
+                }
+            }
+        }
+        
+        // --- FUNGSI UTAMA LAINNYA ---
+        
+        window.prepareDelete = function(id) {
+            if (!isLoggedIn) {
+                showMessage("Anda harus Login Admin untuk menghapus data.", "error");
+                return;
+            }
+            const data = productionData[id];
+            if (!data) return;
+            
+            document.getElementById('deleteCodeDisplay').textContent = `${data.code} (${data.name})`;
+            document.getElementById('deleteIdConfirm').value = id;
+            toggleDeleteModal(true);
+        }
+
+        window.toggleDeleteModal = function(show) {
+            document.getElementById('deleteModal').classList.toggle('hidden', !show);
+        }
+
+        window.startEditData = function(id) { 
+            if (!isLoggedIn) {
+                showMessage("Anda harus Login Admin untuk mengedit data.", "error");
+                return;
+            }
+            const data = productionData[id];
+            if (!data) return;
+            
+            document.getElementById('inputId').value = id;
+            document.getElementById('inputCode').value = data.code;
+            document.getElementById('inputName').value = data.name;
+            document.getElementById('inputMachine').value = data.machine;
+            
+            document.getElementById('inputPcsPerBox').value = data.pcs_per_box.toLocaleString('id-ID');
+            // FIX #3: Akses data menggunakan key yang diperbarui: targetPerShift
+            document.getElementById('inputTargetPerShift').value = data.targetPerShift.toLocaleString('id-ID');
+            
+            document.getElementById('inputTargetPerShift').dispatchEvent(new Event('input'));
+
+            document.getElementById('submitButton').innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3m-1-4l-3 3m0 0l-3 3m3-3V4" />
+                </svg>
+                Perbarui Data (${data.code})
+            `;
+            document.getElementById('submitButton').classList.remove('bg-yellow-600');
+            document.getElementById('submitButton').classList.add('bg-green-600');
+            document.getElementById('cancelEditButton').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.cancelEdit = function() {
+            document.getElementById('productionDataForm').reset();
+            document.getElementById('inputId').value = ''; 
+            
+            document.getElementById('submitButton').innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3m-1-4l-3 3m0 0l-3 3m3-3V4" />
+                </svg>
+                Simpan Data Produksi
+            `;
+            document.getElementById('submitButton').classList.remove('bg-green-600');
+            document.getElementById('submitButton').classList.add('bg-yellow-600');
+            document.getElementById('cancelEditButton').classList.add('hidden');
+            document.getElementById('capacity3Shift').value = 'Otomatis Terisi';
+        }
+        
+        window.toggleDetails = function() {
+            const detailsDiv = document.getElementById('estimationDetails');
+            const button = document.getElementById('toggleDetailsButton');
+            const icon = document.getElementById('toggleIcon');
+            
+            if (detailsDiv.classList.contains('hidden')) {
+                detailsDiv.classList.remove('hidden');
+                button.textContent = 'Sembunyikan Detail Perhitungan';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7-7" />';
+                button.prepend(icon);
+            } else {
+                detailsDiv.classList.add('hidden');
+                button.textContent = 'Lihat Detail Perhitungan';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />';
+                button.prepend(icon);
+            }
+        }
+
+
+        function setupCapacityListener() {
+            const targetInput = document.getElementById('inputTargetPerShift');
+            const capacityOutput = document.getElementById('capacity3Shift');
+
+            const updateCapacity = () => {
+                const target = cleanInt(targetInput.value); 
+                
+                if (target > 0) {
+                    const capacity = target * SHIFTS_PER_DAY;
+                    capacityOutput.value = capacity.toLocaleString('id-ID', { maximumFractionDigits: 0 }) + ' pcs';
+                } else {
+                    capacityOutput.value = 'Otomatis Terisi';
+                }
+            };
+            
+            targetInput.addEventListener('input', updateCapacity);
+            document.getElementById('inputPcsPerBox').addEventListener('input', () => { /* no-op */ });
+        }
+
+        function populateProductDatalist() {
+            const datalist = document.getElementById('productCodeList');
+            datalist.innerHTML = '';
+            
+            const uniqueCodes = {};
+            for (const id in productionData) {
+                const data = productionData[id];
+                if (!uniqueCodes[data.code]) {
+                     uniqueCodes[data.code] = true;
+                     const option = document.createElement('option');
+                     option.value = data.code;
+                     // FIX #4: Akses data menggunakan key yang diperbarui: targetPerShift
+                     option.textContent = `${data.code} - ${data.name} (${data.machine}) [Target 1 Shift: ${data.targetPerShift.toLocaleString('id-ID', { maximumFractionDigits: 0 })} pcs]`;
+                     datalist.appendChild(option);
+                }
+            }
+        }
+
+        function renderRateTable() {
+            const container = document.getElementById('rateTableContainer');
+            if (Object.keys(productionData).length === 0) {
+                container.innerHTML = '<p class="text-gray-500 p-4">Belum ada data produksi yang tersimpan. Silakan tambahkan data menggunakan formulir di atas (setelah login admin).</p>';
+                return;
+            }
+            
+            const actionHeader = isLoggedIn ? '<th class="py-3 px-4 border-b text-center">Aksi</th>' : '';
+            
+            let tableHTML = `
+                <table class="min-w-full bg-white border border-gray-200">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th class="py-3 px-4 border-b">Kode Barang</th>
+                            <th class="py-3 px-4 border-b">Nama Komponen / Produk</th>
+                            <th class="py-3 px-4 border-b">Mesin Utama</th>
+                            <th class="py-3 px-4 border-b text-right">Isi Dus (pcs)</th>
+                            <th class="py-3 px-4 border-b text-right">Target 1 Shift (pcs)</th>
+                            <th class="py-3 px-4 border-b text-right font-bold text-red-600">Kapasitas 3 Shift (pcs)</th>
+                            ${actionHeader}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            for (const id in productionData) {
+                const data = productionData[id];
+                // FIX #5: Akses data menggunakan key yang diperbarui: targetPerShift
+                const capacity3ShiftPcs = data.targetPerShift * SHIFTS_PER_DAY;
+                
+                const actionButtons = isLoggedIn ? `
+                    <td class="py-3 px-4 text-center whitespace-nowrap space-x-2">
+                        <button onclick="startEditData('${id}')" 
+                                class="text-indigo-500 hover:text-indigo-700 p-2 rounded-full transition duration-150 ease-in-out hover:bg-indigo-50 transform hover:scale-105"
+                                title="Edit Data">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        
+                        <button onclick="prepareDelete('${id}')" 
+                                class="text-red-500 hover:text-red-700 p-2 rounded-full transition duration-150 ease-in-out hover:bg-red-50 transform hover:scale-105"
+                                title="Hapus Data">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </td>
+                ` : '';
+
+                tableHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-4 text-gray-800 font-mono">${data.code}</td>
+                        <td class="py-3 px-4 text-gray-700">${data.name}</td>
+                        <td class="py-3 px-4 text-gray-700">${data.machine}</td>
+                        <td class="py-3 px-4 text-right">${data.pcs_per_box.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+                        <td class="py-3 px-4 text-right">${data.targetPerShift.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+                        <td class="py-3 px-4 text-right font-bold text-red-700">${capacity3ShiftPcs.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+                        ${actionButtons}
+                    </tr>
+                `;
+            }
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            container.innerHTML = tableHTML;
+        }
+
+        window.calculateEstimation = function() {
+            const code = document.getElementById('productCode').value.trim(); 
+            const orderQtyInput = document.getElementById('orderQty').value; 
+            const orderQtyDus = cleanInt(orderQtyInput); 
+
+            if (!code) { 
+                showMessage(`Mohon masukkan Kode Barang.`, "error");
+                document.getElementById('results').classList.add('hidden');
+                return;
+            }
+
+            if (orderQtyDus <= 0) { 
+                showMessage("Mohon masukkan Jumlah Pesanan yang valid (angka positif).", "error");
+                document.getElementById('results').classList.add('hidden');
+                return;
+            }
+
+            const matchingProducts = Object.values(productionData).filter(data => data.code === code);
+
+            if (matchingProducts.length === 0) { 
+                showMessage(`Kode Produk "${code}" tidak ditemukan dalam Data Master. Harap masukkan kode yang valid.`, "error");
+                document.getElementById('results').classList.add('hidden');
+                return;
+            }
+            
+            let totalShiftNetAgregate = 0;
+            let componentDetailsHTML = '';
+            const decimalFormatter = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const integerFormatter = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+
+            componentDetailsHTML += `
+                <h4 class="text-lg font-semibold text-gray-800 mb-3 mt-4">Rincian Perhitungan per Komponen (${code}):</h4>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-xs">
+                        <thead>
+                            <tr class="bg-gray-100 text-left text-gray-600 uppercase tracking-wider">
+                                <th class="py-2 px-3 border-b">Komponen/Mesin</th>
+                                <th class="py-2 px-3 border-b text-right">Isi Dus (pcs)</th>
+                                <th class="py-2 px-3 border-b text-right">Target Shift (pcs)</th>
+                                <th class="py-2 px-3 border-b text-right font-bold text-red-700">Kapasitas 3 Shift (pcs)</th> <!-- BARU: Kapasitas 3 Shift -->
+                                <th class="py-2 px-3 border-b text-right">Jam Yang Dibutuhkan</th>
+                                <th class="py-2 px-3 border-b text-right">Shift Yang Dibutuhkan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            matchingProducts.forEach(product => {
+                const pcsPerBox = product.pcs_per_box;
+                // FIX #6: Akses data menggunakan key yang diperbarui: targetPerShift
+                const targetPerShiftPcs = product.targetPerShift; 
+                
+                // BARU: Hitung Kapasitas 3 Shift
+                const capacity3ShiftPcs = targetPerShiftPcs * SHIFTS_PER_DAY;
+
+                const totalPcsOrdered = orderQtyDus * pcsPerBox;
+
+                const shiftNet = totalPcsOrdered / targetPerShiftPcs;
+                const hoursNet = shiftNet * HOURS_PER_SHIFT; // HITUNG JAM MURNI
+                
+                totalShiftNetAgregate += shiftNet;
+
+                const displayedShift = Math.ceil(shiftNet); 
+                
+                // --- PERUBAHAN DI SINI: FORMAT JAM DAN MENIT ---
+                const formattedHoursMinutes = formatHoursMinutes(hoursNet);
+                // ----------------------------------------------
+
+                componentDetailsHTML += `
+                    <tr class="border-b hover:bg-yellow-50">
+                        <td class="py-2 px-3 text-gray-700"><strong>${product.name}</strong> (${product.machine})</td>
+                        <td class="py-2 px-3 text-right">${integerFormatter.format(pcsPerBox)}</td>
+                        <td class="py-2 px-3 text-right">${integerFormatter.format(targetPerShiftPcs)}</td>
+                        <td class="py-2 px-3 text-right font-bold text-red-700">${integerFormatter.format(capacity3ShiftPcs)}</td> <!-- Tampilkan Kapasitas 3 Shift -->
+                        <td class="py-2 px-3 text-right font-medium text-red-600">${formattedHoursMinutes}</td> <!-- Tampilkan Jam dan Menit -->
+                        <td class="py-2 px-3 text-right font-medium text-blue-600">${decimalFormatter.format(shiftNet)} (Dibulatkan: ${integerFormatter.format(displayedShift)})</td>
+                    </tr>
+                `;
+            });
+
+            componentDetailsHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            const totalShiftsBooked = Math.ceil(totalShiftNetAgregate);
+
+            const totalHoursNet = totalShiftNetAgregate * HOURS_PER_SHIFT; 
+            
+            const totalHoursBooked = Math.round(totalHoursNet); 
+            
+            const totalDaysCalculated = totalShiftsBooked / SHIFTS_PER_DAY;
+            const totalDaysBooked = Math.ceil(totalDaysCalculated);
+            
+            // --- PERUBAHAN DI KARTU HASIL (Optional: Menampilkan Jam/Menit Murni) ---
+            const formattedTotalHoursNet = formatHoursMinutes(totalHoursNet);
+
+            document.getElementById('resultHours').textContent = `${integerFormatter.format(totalHoursBooked)} Jam`;
+            document.getElementById('resultShifts').textContent = `${totalShiftsBooked} Shift`;
+            document.getElementById('resultDays').textContent = `${totalDaysBooked} Hari`;
+
+            const simplifiedFinalSummaryHTML = `
+                <h3 class="text-xl font-bold text-gray-800 mt-6 mb-3">Total Estimasi Keseluruhan (Gabungan Komponen)</h3>
+                <ul class="list-disc list-inside space-y-1 ml-4 text-base">
+                    <li>Kode Pesanan: <span class="font-mono font-bold">${code}</span></li>
+                    <li>Jumlah Pesanan Dus: ${integerFormatter.format(orderQtyDus)} Dus</li>
+                    <li>Total Shift Murni Gabungan: ${decimalFormatter.format(totalShiftNetAgregate)} Shift</li>
+                    <li class="font-bold">Total Jam Murni Dihitung: ${formattedTotalHoursNet}.
+                        <span class="text-xs font-normal text-gray-500 block mt-0.5">(Diperoleh dari ${decimalFormatter.format(totalShiftNetAgregate)} Shift &times; ${HOURS_PER_SHIFT} Jam, dibulatkan menjadi ${totalHoursBooked} Jam)</span>
+                    </li>
+                    <li class="font-bold">Total Shift Dijadwalkan: ${totalShiftsBooked} Shift.
+                        <span class="text-xs font-normal text-gray-500 block mt-0.5">(Pembulatan ke atas dari ${decimalFormatter.format(totalShiftNetAgregate)} Shift)</span>
+                    </li>
+                    <li class="font-bold">Total Hari Dijadwalkan: ${totalDaysBooked} Hari.
+                        <span class="text-xs font-normal text-gray-500 block mt-0.5">(Pembulatan ke atas dari ${totalShiftsBooked} Shift / ${SHIFTS_PER_DAY} Hari)</span>
+                    </li>
+                </ul>
+            `;
+            // ------------------------------------------------------------------------
+
+            document.getElementById('estimationDetails').innerHTML = componentDetailsHTML + simplifiedFinalSummaryHTML;
+            document.getElementById('results').classList.remove('hidden');
+            
+            showMessage(`Estimasi berhasil dihitung untuk Kode ${code} (Agregat ${matchingProducts.length} Komponen)!`, "info");
+        }
+    </script>
+</body>
+</html>
