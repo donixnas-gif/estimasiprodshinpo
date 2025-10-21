@@ -23,6 +23,12 @@
         .uppercase-input {
             text-transform: uppercase;
         }
+        /* Style untuk Tab Aktif */
+        .tab-active {
+            border-bottom: 3px solid #3b82f6; /* blue-500 */
+            color: #1d4ed8; /* blue-800 */
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8 min-h-screen">
@@ -39,146 +45,187 @@
             </button>
         </div>
         
-        <p class="text-gray-600 mb-8">
-            Hitung estimasi jam, shift, dan hari yang diperlukan.
+        <!-- Tab Navigasi Baru -->
+        <div class="flex border-b border-gray-200 mb-8">
+            <button id="tabEstimation" onclick="showView('estimation')" class="px-4 py-2 text-gray-500 hover:text-blue-600 transition duration-150 tab-active">
+                Estimasi Produksi
+            </button>
+            <button id="tabPlanning" onclick="showView('planning')" class="px-4 py-2 text-gray-500 hover:text-blue-600 transition duration-150">
+                Perencanaan Mesin
+            </button>
+            <button id="tabMaster" onclick="showView('master')" class="px-4 py-2 text-gray-500 hover:text-blue-600 transition duration-150">
+                Data Master
+            </button>
+        </div>
+        
+        <p class="text-gray-600 mb-8" id="viewDescription">
+            Hitung Estimasi Produksi
         </p>
 
-        <!-- Bagian Input Data Produksi Baru (Hanya tampil jika Admin Login) -->
-        <div id="adminPanel" class="hidden">
-            <div class="mb-10 p-6 bg-yellow-50 rounded-xl border border-yellow-200">
-                <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Manajemen Data Produksi Baru
-                </h2 >
-                <form id="productionDataForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Field tersembunyi untuk ID saat Edit -->
-                    <input type="hidden" id="inputId" value="">
+        <!-- ============================================== -->
+        <!-- FORMULIR INPUT DATA PRODUKSI BARU (GLOBAL) -->
+        <!-- ============================================== -->
+        <div id="adminPanel" class="mb-10 p-6 bg-yellow-50 rounded-xl border border-yellow-200 hidden">
+            <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Formulir Data Produksi Baru
+            </h2 >
+            <form id="productionDataForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Field tersembunyi untuk ID saat Edit -->
+                <input type="hidden" id="inputId" value="">
 
-                    <!-- Row 1: Kode, Komponen, Mesin -->
-                    <div>
-                        <label for="inputCode" class="block text-sm font-medium text-gray-700">Kode Barang *</label>
-                        <!-- Ditambahkan class uppercase-input dan oninput untuk force uppercase -->
-                        <input type="text" id="inputCode" placeholder="Contoh: 110" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 text-gray-800 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
-                    </div>
-                    <div>
-                        <label for="inputName" class="block text-sm font-medium text-gray-700">Nama Komponen / Produk</label>
-                         <!-- Ditambahkan class uppercase-input dan oninput untuk force uppercase -->
-                        <input type="text" id="inputName" placeholder="Contoh: Komponen Standard X" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
-                    </div>
-                    <div>
-                        <label for="inputMachine" class="block text-sm font-medium text-gray-700">Mesin Utama</label>
-                        <!-- Ditambahkan class uppercase-input dan oninput untuk force uppercase -->
-                        <input type="text" id="inputMachine" placeholder="Contoh: Mesin A01" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:focus:border-yellow-500 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
-                    </div>
+                <!-- Row 1: Kode, Komponen, Mesin -->
+                <div>
+                    <label for="inputCode" class="block text-sm font-medium text-gray-700">Kode Barang *</label>
+                    <input type="text" id="inputCode" placeholder="Contoh: 110" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 text-gray-800 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
+                </div>
+                <div>
+                    <label for="inputName" class="block text-sm font-medium text-gray-700">Nama Komponen / Produk</label>
+                    <input type="text" id="inputName" placeholder="Contoh: Komponen Standard X" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
+                </div>
+                <div>
+                    <label for="inputMachine" class="block text-sm font-medium text-gray-700">Mesin Utama</label>
+                    <input type="text" id="inputMachine" placeholder="Contoh: Mesin A01" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:focus:border-yellow-500 shadow-sm uppercase-input" oninput="this.value = this.value.toUpperCase()">
+                </div>
 
-                    <!-- Row 2: Calculation Inputs & Output -->
+                <!-- Row 2: Calculation Inputs & Output -->
+                <div>
+                    <label for="inputPcsPerBox" class="block text-sm font-medium text-gray-700">Isi Dus (pcs) *</label>
+                    <input type="text" id="inputPcsPerBox" placeholder="Contoh: 100" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm">
+                </div>
+                <div>
+                    <label for="inputTargetPerShift" class="block text-sm font-medium text-gray-700">Target per Shift (pcs) *</label>
+                    <input type="text" id="inputTargetPerShift" placeholder="Contoh: 8000" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm">
+                </div>
+                <div class="flex flex-col">
+                    <label for="capacity3Shift" class="block text-sm font-medium text-gray-700">Kapasitas 3 Shift (pcs)</label>
+                    <input type="text" id="capacity3Shift" readonly value="Otomatis Terisi" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 shadow-inner">
+                </div>
+                
+                <div class="sm:col-span-2 lg:col-span-3 pt-2 flex space-x-3">
+                    <button type="submit" id="submitButton" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3m-1-4l-3 3m0 0l-3 3m3-3V4" />
+                        </svg>
+                        Simpan Data Produksi
+                    </button>
+                    <button type="button" id="cancelEditButton" onclick="cancelEdit()" class="hidden w-1/4 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg">
+                        Batal Edit
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- ============================================== -->
+        <!-- VIEW 1: ESTIMASI PRODUKSI (DEFAULT) -->
+        <!-- ============================================== -->
+        <div id="estimationView" class="view-content">
+            
+            <!-- Container untuk Form Input Estimasi, disembunyikan jika Admin Login -->
+            <div id="estimationFormContainer">
+                <!-- Bagian Input Estimasi (Search Bar menggantikan Dropdown) -->
+                <div class="grid grid-cols-1 md:col-span-3 gap-6 mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
                     <div>
-                        <label for="inputPcsPerBox" class="block text-sm font-medium text-gray-700">Isi Dus (pcs) *</label>
-                        <input type="text" id="inputPcsPerBox" placeholder="Contoh: 100" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm">
+                        <label for="productCode" class="block text-sm font-medium text-gray-700 mb-1">Kode Produk (Ketik untuk Mencari)</label>
+                        <!-- Diberi class uppercase-input agar terlihat konsisten -->
+                        <!-- Menambahkan oninput untuk memastikan kode yang dicari uppercase -->
+                        <input type="text" id="productCode" placeholder="Masukkan Kode Barang" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-800 shadow-sm transition duration-150 ease-in-out uppercase-input" list="productCodeList" oninput="this.value = this.value.toUpperCase()">
+                        
+                        <!-- Datalist untuk memberikan saran (seperti autocomplete) -->
+                        <datalist id="productCodeList">
+                            <!-- Opsi akan diisi oleh JavaScript -->
+                        </datalist>
+                        
                     </div>
-                    <div>
-                        <label for="inputTargetPerShift" class="block text-sm font-medium text-gray-700">Target per Shift (pcs) *</label>
-                        <input type="text" id="inputTargetPerShift" placeholder="Contoh: 8000" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-yellow-500 focus:border-yellow-500 shadow-sm">
+                    <div class="md:col-span-2">
+                        <label for="orderQty" class="block text-sm font-medium text-gray-700 mb-1">Jumlah Pesanan (Dus)</label>
+                        <input type="number" id="orderQty" placeholder="Contoh: 1500" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm transition duration-150 ease-in-out" min="1">
                     </div>
-                    <div class="flex flex-col">
-                        <label for="capacity3Shift" class="block text-sm font-medium text-gray-700">Kapasitas 3 Shift (pcs)</label>
-                        <input type="text" id="capacity3Shift" readonly value="Otomatis Terisi" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 shadow-inner">
-                    </div>
-                    
-                    <div class="sm:col-span-2 lg:col-span-3 pt-2 flex space-x-3">
-                        <button type="submit" id="submitButton" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3m-1-4l-3 3m0 0l-3 3m3-3V4" />
+                    <div class="md:col-span-3">
+                        <button onclick="calculateEstimation()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.01] shadow-lg shadow-blue-500/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                             </svg>
-                            Simpan Data Produksi
-                        </button>
-                        <button type="button" id="cancelEditButton" onclick="cancelEdit()" class="hidden w-1/4 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg">
-                            Batal Edit
+                            Hitung Estimasi Produksi
                         </button>
                     </div>
-                </form>
+                </div>
+            </div>
+
+
+            <!-- Bagian Hasil Estimasi -->
+            <div id="results" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Hasil Estimasi Waktu</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+
+                    <!-- Kartu Jam -->
+                    <div class="bg-indigo-50 p-5 rounded-xl shadow-md border-t-4 border-indigo-500">
+                        <p class="text-sm font-medium text-indigo-700">Total Jam Produksi (Net)</p>
+                        <p id="resultHours" class="text-3xl font-bold text-indigo-900 mt-1">--</p>
+                    </div>
+
+                    <!-- Kartu Shift -->
+                    <div class="bg-green-50 p-5 rounded-xl shadow-md border-t-4 border-green-500">
+                        <p class="text-sm font-medium text-green-700">Total Shift Dibutuhkan (Pembulatan ke atas)</p>
+                        <p id="resultShifts" class="text-3xl font-bold text-green-900 mt-1">--</p>
+                    </div>
+
+                    <!-- Kartu Hari -->
+                    <div class="bg-orange-50 p-5 rounded-xl shadow-md border-t-4 border-orange-500">
+                        <p class="text-sm font-medium text-orange-700">Total Hari Kerja (Pembulatan ke atas)</p>
+                        <p id="resultDays" class="text-3xl font-bold text-orange-900 mt-1">--</p>
+                    </div>
+                </div>
+                
+                <!-- Tombol Toggle Detail Estimasi -->
+                <div class="flex justify-end mb-4">
+                    <button id="toggleDetailsButton" onclick="toggleDetails()" class="text-sm text-gray-600 hover:text-blue-600 font-medium transition duration-150 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" id="toggleIcon">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                        Lihat Detail Perhitungan
+                    </button>
+                </div>
+
+                <!-- Detail Pesanan -->
+                <div id="estimationDetails" class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-200 hidden">
+                    <!-- Detail estimasi akan ditampilkan di sini -->
+                </div>
             </div>
         </div>
         
-        <!-- Bagian Input Estimasi (Search Bar menggantikan Dropdown) -->
-        <div class="grid grid-cols-1 md:col-span-3 gap-6 mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
-            <div>
-                <label for="productCode" class="block text-sm font-medium text-gray-700 mb-1">Kode Produk (Ketik untuk Mencari)</label>
-                <!-- Diberi class uppercase-input agar terlihat konsisten -->
-                <!-- Menambahkan oninput untuk memastikan kode yang dicari uppercase -->
-                <input type="text" id="productCode" placeholder="Masukkan Kode Barang" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-800 shadow-sm transition duration-150 ease-in-out uppercase-input" list="productCodeList" oninput="this.value = this.value.toUpperCase()">
-                
-                <!-- Datalist untuk memberikan saran (seperti autocomplete) -->
-                <datalist id="productCodeList">
-                    <!-- Opsi akan diisi oleh JavaScript -->
-                </datalist>
-                
+        <!-- ============================================== -->
+        <!-- VIEW 2: PERENCANAAN MESIN -->
+        <!-- ============================================== -->
+        <div id="planningView" class="view-content hidden">
+            <!-- Konten dikosongkan untuk diisi nanti oleh user -->
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Kapasitas Mesin Utama</h2>
+            <div id="planningTableContainer" class="overflow-x-auto rounded-lg shadow-md">
+                <!-- Data perencanaan mesin akan dirender di sini, atau pesan kosong jika admin login -->
             </div>
-            <div class="md:col-span-2">
-                <label for="orderQty" class="block text-sm font-medium text-gray-700 mb-1">Jumlah Pesanan (Dus)</label>
-                <input type="number" id="orderQty" placeholder="Contoh: 1500" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm transition duration-150 ease-in-out" min="1">
-            </div>
-            <div class="md:col-span-3">
-                <button onclick="calculateEstimation()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.01] shadow-lg shadow-blue-500/50">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                    </svg>
-                    Hitung Estimasi Produksi
-                </button>
-            </div>
-        </div>
-
-        <!-- Bagian Hasil Estimasi -->
-        <div id="results" class="hidden">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Hasil Estimasi Waktu</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-
-                <!-- Kartu Jam -->
-                <div class="bg-indigo-50 p-5 rounded-xl shadow-md border-t-4 border-indigo-500">
-                    <p class="text-sm font-medium text-indigo-700">Total Jam Produksi (Net)</p>
-                    <p id="resultHours" class="text-3xl font-bold text-indigo-900 mt-1">--</p>
-                </div>
-
-                <!-- Kartu Shift -->
-                <div class="bg-green-50 p-5 rounded-xl shadow-md border-t-4 border-green-500">
-                    <p class="text-sm font-medium text-green-700">Total Shift Dibutuhkan (Pembulatan ke atas)</p>
-                    <p id="resultShifts" class="text-3xl font-bold text-green-900 mt-1">--</p>
-                </div>
-
-                <!-- Kartu Hari -->
-                <div class="bg-orange-50 p-5 rounded-xl shadow-md border-t-4 border-orange-500">
-                    <p class="text-sm font-medium text-orange-700">Total Hari Kerja (Pembulatan ke atas)</p>
-                    <p id="resultDays" class="text-3xl font-bold text-orange-900 mt-1">--</p>
-                </div>
-            </div>
-            
-            <!-- Tombol Toggle Detail Estimasi -->
-            <div class="flex justify-end mb-4">
-                <button id="toggleDetailsButton" onclick="toggleDetails()" class="text-sm text-gray-600 hover:text-blue-600 font-medium transition duration-150 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" id="toggleIcon">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                    Lihat Detail Perhitungan
-                </button>
-            </div>
-
-            <!-- Detail Pesanan -->
-            <div id="estimationDetails" class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-200 hidden">
-                <!-- Detail estimasi akan ditampilkan di sini -->
-            </div>
-        </div>
-
-        <!-- Tabel Data Laju Produksi Asumsi -->
-        <div class="mt-10 pt-4 border-t border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800 mb-3">Data Master Produksi Tersimpan</h2>
-            <div id="rateTableContainer" class="overflow-x-auto rounded-lg shadow-md">
-                <!-- Tabel akan diisi oleh JavaScript -->
-            </div>
-            <p class="text-xs text-gray-500 mt-2">
-                *Asumsi: 1 Hari = 3 Shift, 1 Shift = 8 Jam. Perhitungan waktu didasarkan pada target pcs per shift.
+            <p class="text-xs text-gray-500 mt-4" id="planningDescription">
+                Tabel ini menunjukkan total Kapasitas 3 Shift untuk setiap jenis Mesin Utama berdasarkan data master yang tersimpan.
             </p>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VIEW 3: DATA MASTER -->
+        <!-- ============================================== -->
+        <div id="masterView" class="view-content hidden">
+            <!-- Tabel Data Laju Produksi Asumsi -->
+            <div id="masterTableContainer">
+                <div class="mt-10 pt-4 border-t border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Data Master Produksi Tersimpan</h2>
+                    <div id="rateTableContainer" class="overflow-x-auto rounded-lg shadow-md">
+                        <!-- Tabel akan diisi oleh JavaScript -->
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        *Asumsi: 1 Hari = 3 Shift, 1 Shift = 8 Jam. Perhitungan waktu didasarkan pada target pcs per shift.
+                    </p>
+                </div>
+            </div>
         </div>
 
         <!-- Pesan Kesalahan/Informasi -->
@@ -254,7 +301,7 @@
             return parseInt(cleaned) || 0; 
         };
         
-        // **FUNGSI BARU**: Mengubah Jam Desimal menjadi "X Jam Y Menit"
+        // Mengubah Jam Desimal menjadi "X Jam Y Menit"
         function formatHoursMinutes(decimalHours) {
             if (decimalHours < 0) return '0 Jam 0 Menit';
             
@@ -267,6 +314,123 @@
             
             return `${hours} Jam ${minutes} Menit`;
         }
+        
+        // **FUNGSI BARU**: Mengatur Tampilan (View)
+        window.showView = function(viewName) {
+            const views = ['estimation', 'planning', 'master'];
+            const description = document.getElementById('viewDescription');
+            
+            // Ambil elemen yang relevan
+            const adminPanel = document.getElementById('adminPanel');
+            const estimationFormContainer = document.getElementById('estimationFormContainer');
+            const resultsContainer = document.getElementById('results');
+            const planningTableContainer = document.getElementById('planningTableContainer');
+            const planningDescription = document.getElementById('planningDescription');
+            const masterTableContainer = document.getElementById('masterTableContainer');
+
+
+            views.forEach(view => {
+                const viewElement = document.getElementById(`${view}View`);
+                const tabElement = document.getElementById(`tab${view.charAt(0).toUpperCase() + view.slice(1)}`);
+                
+                viewElement.classList.add('hidden');
+                tabElement.classList.remove('tab-active');
+            });
+            
+            document.getElementById(`${viewName}View`).classList.remove('hidden');
+            document.getElementById(`tab${viewName.charAt(0).toUpperCase() + viewName.slice(1)}`).classList.add('tab-active');
+            
+            // Atur default visibility untuk elemen global
+            adminPanel.classList.add('hidden');
+            estimationFormContainer.classList.add('hidden');
+            resultsContainer.classList.add('hidden');
+            masterTableContainer.classList.add('hidden');
+
+            // LOGIKA VISIBILITAS BERDASARKAN VIEW DAN STATUS LOGIN
+            if (viewName === 'estimation') {
+                 description.textContent = 'Hitung Estimasi Produksi';
+                 
+                 if (isLoggedIn) {
+                     // PERINTAH REVISI: Jika Admin login, tampilkan Formulir Data Produksi Baru di Estimasi View
+                     adminPanel.classList.remove('hidden'); 
+                     // Form estimasi dan hasilnya tetap hidden, sesuai permintaan.
+                 } else {
+                     // Pengguna Biasa
+                     estimationFormContainer.classList.remove('hidden'); // Tampilkan form Estimasi
+                     // results tetap hidden sampai dihitung
+                 }
+
+            } else if (viewName === 'planning') {
+                 description.textContent = 'Lihat perencanaan dan total kapasitas mesin berdasarkan data master.';
+                 
+                 // PERINTAH REVISI TERBARU: Selalu kosongkan halaman Perencanaan Mesin.
+                 planningTableContainer.innerHTML = '<p class="text-gray-500 p-4">Halaman ini dikosongkan untuk input perencanaan khusus yang akan datang.</p>';
+                 planningDescription.classList.add('hidden');
+                 
+                 /* KODE LAMA: 
+                 if (isLoggedIn) {
+                     planningTableContainer.innerHTML = '<p class="text-gray-500 p-4">Halaman ini dikosongkan untuk input perencanaan khusus admin. Silakan kembali ke tab Data Master untuk mengelola kapasitas mesin.</p>';
+                     planningDescription.classList.add('hidden');
+                 } else {
+                     renderPlanningTable(); // Tampilkan data jika pengguna biasa (tidak login)
+                     planningDescription.classList.remove('hidden');
+                 }
+                 */
+
+            } else if (viewName === 'master') {
+                 description.textContent = 'Kelola data master target dan kapasitas produksi.';
+                 
+                 masterTableContainer.classList.remove('hidden'); // Tabel selalu terlihat di Master View
+                 renderRateTable(); // Render tabel (termasuk tombol aksi jika login)
+
+                 // PERINTAH REVISI: Formulir Input Data Produksi Baru di Data Master di HIDE
+                 if (isLoggedIn) {
+                     adminPanel.classList.add('hidden'); // Disembunyikan (Hanya tampil di Estimasi View)
+                 }
+            }
+        }
+        
+        // **FUNGSI BARU**: Merender Tabel Perencanaan Mesin
+        function renderPlanningTable() {
+            const container = document.getElementById('planningTableContainer');
+            const planningDescription = document.getElementById('planningDescription');
+            
+            // **PERUBAHAN DI SINI**: Ganti logika rendering tabel perencanaan
+            container.innerHTML = '<p class="text-gray-500 p-4">Halaman ini dikosongkan untuk input perencanaan khusus yang akan datang.</p>';
+            planningDescription.classList.add('hidden');
+            
+            /* KODE LAMA AGREGASI DATA, DINONAKTIFKAN SESUAI PERMINTAAN USER:
+            const machines = {};
+            
+            Object.values(productionData).forEach(data => {
+                const machineName = data.machine || 'UNKNOWN';
+                const capacity = data.targetPerShift * SHIFTS_PER_DAY;
+                
+                if (!machines[machineName]) {
+                    machines[machineName] = {
+                        totalCapacity: 0,
+                        productCount: 0
+                    };
+                }
+                machines[machineName].totalCapacity += capacity;
+                machines[machineName].productCount += 1;
+            });
+            
+            if (Object.keys(machines).length === 0) {
+                container.innerHTML = '<p class="text-gray-500 p-4">Belum ada data produksi yang tersimpan untuk dianalisis.</p>';
+                planningDescription.classList.remove('hidden');
+                return;
+            }
+
+            const integerFormatter = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+            
+            let tableHTML = `
+                // ... (tabel HTML)
+            `;
+            container.innerHTML = tableHTML;
+            planningDescription.classList.remove('hidden');
+            */
+        }
 
         // Inisialisasi Supabase
         window.onload = async function() {
@@ -275,6 +439,7 @@
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 setupApp();
                 showMessage("Koneksi Supabase Berhasil! (Menggunakan data 'production_rates')", "info");
+                showView('estimation'); // Pastikan tampilan awal adalah Estimasi
 
             } catch (error) {
                 console.error("Kesalahan inisialisasi Supabase:", error);
@@ -306,29 +471,32 @@
             setupCapacityListener();
             listenForProductionData();
             document.getElementById('productionDataForm').addEventListener('submit', saveProductionData);
-            updateAdminUI(); 
+            // Panggil updateAdminUI sekali untuk setup awal tombol login/logout
         }
         
         // --- LOGIKA ADMIN LOGIN/LOGOUT ---
 
         function updateAdminUI() {
-            const adminPanel = document.getElementById('adminPanel');
             const loginButton = document.getElementById('adminLoginButton');
             
             if (isLoggedIn) {
-                adminPanel.classList.remove('hidden');
                 loginButton.textContent = 'Logout';
                 loginButton.onclick = prepareLogout; 
                 loginButton.classList.remove('bg-indigo-500');
                 loginButton.classList.add('bg-red-500', 'hover:bg-red-600');
             } else {
-                adminPanel.classList.add('hidden');
                 loginButton.textContent = 'Login';
                 loginButton.onclick = toggleAdminLogin;
                 loginButton.classList.remove('bg-red-500');
                 loginButton.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
             }
-            renderRateTable();
+            // Setelah perubahan status login, render ulang view yang sedang aktif
+            // Mencari view yang sedang aktif dengan class 'view-content' dan tidak 'hidden'
+            const activeViewElement = document.querySelector('.view-content:not(.hidden)');
+            if (activeViewElement) {
+                const activeView = activeViewElement.id.replace('View', '');
+                showView(activeView); 
+            }
         }
 
         window.toggleAdminLogin = function() {
@@ -431,7 +599,9 @@
             }
             productionData = newProductionData;
             populateProductDatalist(); 
-            renderRateTable();
+            // Render ulang semua tabel setelah data diperbarui
+            renderRateTable(); 
+            renderPlanningTable(); 
         }
 
         // Menyimpan / Mengupdate data (Menggunakan Supabase insert/update)
@@ -582,6 +752,7 @@
             document.getElementById('cancelEditButton').classList.remove('hidden');
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            showView('estimation'); // Pindah ke tampilan estimasi (tempat form berada) saat mengedit
         }
 
         window.cancelEdit = function() {
@@ -655,11 +826,12 @@
                 }
             }
         }
-
+        
+        // --- FUNGSI MERENDER TABEL MASTER PRODUKSI (Digunakan di view 'master') ---
         function renderRateTable() {
             const container = document.getElementById('rateTableContainer');
             if (Object.keys(productionData).length === 0) {
-                container.innerHTML = '<p class="text-gray-500 p-4">Belum ada data produksi yang tersimpan. Silakan tambahkan data menggunakan formulir di atas (setelah login admin).</p>';
+                container.innerHTML = '<p class="text-gray-500 p-4">Belum ada data produksi yang tersimpan. Silakan tambahkan data menggunakan formulir di halaman Estimasi Produksi (setelah login admin).</p>';
                 return;
             }
             
